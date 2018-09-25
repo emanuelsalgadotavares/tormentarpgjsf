@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+						http://www.springframework.org/schema/beans/spring-beans-4.0.xsd 
+						http://www.springframework.org/schema/tx 
+						http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+						http://www.springframework.org/schema/context 
+						http://www.springframework.org/schema/context/spring-context-4.0.xsd
+						http://www.springframework.org/schema/aop 
+  						http://www.springframework.org/schema/aop/spring-aop-4.0.xsd
+  						http://www.springframework.org/schema/task 
+  						http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+	<!-- Habilita configuraÃ§Ã£o via annotations -->
+	<context:annotation-config />
+	<context:component-scan base-package="org.tormentarpg" />
+
+	<!-- Agendamento de tarefas -->
+	<task:annotation-driven />
+
+	<!-- Persistence -->
+	<bean class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />
+	<bean class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+
+	<bean id="emf" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="persistenceUnitName" value="tormentarpg" />
+		<property name="dataSource" ref="dataSource" />
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+				<property name="databasePlatform" value="org.hibernate.dialect.Oracle10gDialect" />
+				<property name="showSql" value="false" />
+				<property name="generateDdl" value="false" />
+			</bean>
+		</property>
+		<property name="packagesToScan">
+			<list>
+				<value>org.tormentarpg.model</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+        <property name="driverClass" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/tormentarpg"/>
+        <property name="user" value="root"/>
+        <property name="password" value="root"/>
+    </bean>
+
+    <bean class="org.springframework.jdbc.core.JdbcTemplate">
+		<constructor-arg ref="dataSource" />
+	</bean>
+
+	<!-- Transaction Management via AOP por XML -->
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="emf" />
+	</bean>
+
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="find*" propagation="SUPPORTS" read-only="true" />
+			<tx:method name="get*" propagation="SUPPORTS" read-only="true" />
+			<tx:method name="*" propagation="REQUIRED" rollback-for="Exception"/>
+		</tx:attributes>
+	</tx:advice>
+
+	<aop:config>
+		<!-- Todas as classes do pacote "service" terao metodos gerenciados -->
+		<aop:pointcut id="serviceMethods"
+			expression="execution(*org.tormentarpg.service..*.*(..))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="serviceMethods" />
+	</aop:config>
+</beans>
