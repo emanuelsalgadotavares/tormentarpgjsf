@@ -24,7 +24,7 @@
 	<task:annotation-driven />
 
 	<!-- Persistence -->
-	<bean class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />
+	<!-- <bean class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor" />
 	<bean class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
 
 	<bean id="emf" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
@@ -55,11 +55,17 @@
 		<constructor-arg ref="dataSource" />
 	</bean>
 
-	<!-- Transaction Management via AOP por XML -->
+	Transaction Management via AOP por XML
 	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
 		<property name="entityManagerFactory" ref="emf" />
 	</bean>
 
+	<aop:config>
+		<aop:pointcut id="serviceMethods"
+			expression="execution(*org.tormentarpg.service..*.*(..))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="serviceMethods" />
+	</aop:config>
+	
 	<tx:annotation-driven transaction-manager="transactionManager" />
 
 	<tx:advice id="txAdvice" transaction-manager="transactionManager">
@@ -68,12 +74,16 @@
 			<tx:method name="get*" propagation="SUPPORTS" read-only="true" />
 			<tx:method name="*" propagation="REQUIRED" rollback-for="Exception"/>
 		</tx:attributes>
-	</tx:advice>
-
-	<aop:config>
-		<!-- Todas as classes do pacote "service" terao metodos gerenciados -->
-		<aop:pointcut id="serviceMethods"
-			expression="execution(*org.tormentarpg.service..*.*(..))" />
-		<aop:advisor advice-ref="txAdvice" pointcut-ref="serviceMethods" />
-	</aop:config>
+	</tx:advice> -->
+	
+	<!-- Custom Scope -->
+	<bean class="org.springframework.beans.factory.config.CustomScopeConfigurer">
+		<property name="scopes">
+			<map>
+				<entry key="view">
+					<bean class="org.tormentarpg.util.ViewScopeSpringSupport" />
+				</entry>
+			</map>
+		</property>
+	</bean>
 </beans>
